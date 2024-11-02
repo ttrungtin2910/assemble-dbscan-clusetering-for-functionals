@@ -1,7 +1,12 @@
 import numpy as np
 from scipy.stats import norm
 
-def SimPDFAbnormal(mu_ranges, sig_values, grid, abnormal_params=None):
+def SimPDFAbnormal(
+        mu_ranges,
+        sig_values,
+        grid,
+        abnormal_params=None
+    ):
     """
     Simulates Probability Density Functions (PDFs) for multiple normal distributions 
     and optional abnormal distributions.
