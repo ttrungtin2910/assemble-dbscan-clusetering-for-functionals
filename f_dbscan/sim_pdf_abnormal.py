@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm
 
-def SimPDFAbnormal(
+def sim_pdf_abnormal(
         mu_ranges,
         sig_values,
         grid,
