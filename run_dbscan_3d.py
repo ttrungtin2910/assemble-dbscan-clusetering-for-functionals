@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from f_dbscan.f_dbscan_3d import f_dbscan_3d, plot_f_dbscan_3d
+from algorithm.dbscan_3d import clustering_3d
+from visualization.visualization_3d import plot_3d
 from scipy.stats import multivariate_normal
 
 def create_pdfs_dataset(x, y, visualize: bool= False):
@@ -11,8 +12,8 @@ def create_pdfs_dataset(x, y, visualize: bool= False):
     sigma2 = np.array([[0.1, 0], [0, 0.3]])
 
     # Generating data points
-    data1 = np.random.multivariate_normal(mu1, sigma1, 100)
-    data2 = np.random.multivariate_normal(mu2, sigma2, 3)
+    data1 = np.random.multivariate_normal(mu1, sigma1, 50)
+    data2 = np.random.multivariate_normal(mu2, sigma2, 50)
     mu = np.vstack((data1, data2))
 
     # Initialize variables for contour plotting
@@ -24,7 +25,7 @@ def create_pdfs_dataset(x, y, visualize: bool= False):
         
 
     for j in range(num_sample):
-        sig_j = 3 + 30 * np.random.rand()
+        sig_j = 1 # np.random.rand()#3 + 5 * np.random.rand()
         rv = multivariate_normal(mean=mu[j], cov=np.eye(2) / sig_j)
         fi_j = rv.pdf(np.c_[x.ravel(), y.ravel()]).reshape(x.shape)
         if visualize:
@@ -36,9 +37,7 @@ def create_pdfs_dataset(x, y, visualize: bool= False):
         plt.xlabel('X-axis')
         plt.ylabel('Y-axis')
         plt.show()
-        
-        
-    
+
     return fi
 
 
@@ -49,6 +48,6 @@ if __name__ == "__main__":
 
     f_x = create_pdfs_dataset(x=x, y=y, visualize=True)
     
-    f_y = f_dbscan_3d(data=f_x,epsilon=0.9, min_points=3,step=step)
+    f_y = clustering_3d(data=f_x,epsilon=0.5, min_points=10,step=step)
 
-    plot_f_dbscan_3d(f_x, f_y, x, y)
+    plot_3d(f_x, f_y, x, y)

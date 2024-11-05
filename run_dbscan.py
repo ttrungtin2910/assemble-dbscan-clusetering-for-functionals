@@ -2,8 +2,9 @@ import numpy as np
 from typing import Tuple
 import matplotlib.pyplot as plt
 
-from f_dbscan.f_dbscan import f_dbscan, plot_f_dbscan
-from f_dbscan.sim_pdf_abnormal import sim_pdf_abnormal
+from algorithm.dbscan_2d import clustering_2d
+from visualization.visualization_2d import plot_2d
+from data_making.pdf_2d_abnormal import sim_pdf_abnormal
 
 # Set random seed for data
 random_seed = 24
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     # # Create dataset
     f_x, f_y = create_pdfs_dataset(data_points=data_points, visualize = False)
 
-    f_y_cluster = f_dbscan(data = f_x, epsilon = 0.5, min_points = 3, step=step)
+    f_y_cluster = clustering_2d(data = f_x, epsilon = 0.5, min_points = 3, step=step)
 
     # Plot the DBSCAN results with annotations
-    plot_f_dbscan(f_x, f_y_cluster, data_points)
+    plot_2d(f_x, f_y_cluster, data_points)

@@ -1,13 +1,44 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import multivariate_normal
+from typing import List
 
-def f_dbscan_3d(
-        data,
+def clustering_3d(
+        data: List[np.ndarray],
         epsilon: float, # Neighborhood radius (Bán kính lân cận)
         min_points: int, # Minimum number of points (Số điểm tối thiểu)
         step: float
     ) -> np.ndarray:
+
+    """
+    Performs DBSCAN clustering on a dataset using a overlap distance matrix.
+
+    This function applies DBSCAN on a dataset `data`, with clusters identified based on 
+    a neighborhood radius (`epsilon`) and a minimum number of points per cluster (`min_points`).
+    The distance matrix is calculated using an integration-like similarity measure, 
+    and noise points are labeled as 0, with clusters starting from label 1.
+
+    Parameters
+    ----------
+    data : list[np.ndarray]
+        A list of 2D array where each array is a data sample to be clustered.
+    epsilon : float
+        The neighborhood radius within which points are considered neighbors.
+    min_points : int
+        The minimum number of points required to form a dense region (cluster).
+    step : float
+        The incremental step size used in the overlap distance calculation.
+
+    Returns
+    -------
+    np.ndarray
+        A 1D array containing cluster labels for each point in the dataset, 
+        with 0 indicating noise points and positive integers denoting clusters.
+
+    Notes
+    -----
+    - This DBSCAN implementation uses a custom distance matrix, where each entry is calculated 
+      based on an integration-like similarity measure.
+    - Noise points are automatically labeled as 0.
+    """
 
     # DBSCAN parameters
 
@@ -38,7 +69,7 @@ def f_dbscan_3d(
                 num_clusters += 1
                 label[i] = num_clusters
                 k = 0
-                while k < len(neighbors):
+                while True:
                     j = neighbors[k]
                     if not visited[j]:
                         visited[j] = True
@@ -59,26 +90,3 @@ def f_dbscan_3d(
         # END if
     # END for loop
     return label
-
-
-def plot_f_dbscan_3d(data, cluster, x, y):
-    # Plotting the clusters
-    k = int(cluster.max())
-    n = len(cluster)
-
-    Colors = plt.cm.hsv(np.linspace(0, 1, k))
-
-    plt.figure()
-    for i in range(0, k + 1):
-        cluster_fi = [data[j] for j in range(n) if cluster[j] == i]
-        Color = Colors[i - 1] if i > 0 else [0, 0, 0]
-        legendText = f'Cluster #{i}' if i > 0 else 'Noise'
-        
-        for f_j in cluster_fi:
-            plt.contour(x, y, f_j, colors=[Color], linewidths=1.5)
-        
-    plt.title('3D Contour Plot for DBSCAN Clusters')
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
-    plt.grid(True)
-    plt.show()
