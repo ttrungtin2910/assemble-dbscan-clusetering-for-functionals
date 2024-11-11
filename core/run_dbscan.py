@@ -1,6 +1,6 @@
 import numpy as np
 from evaluate.metrics import ari
-from algorithm.pdf_dbscan import Dbscan2D
+from algorithm.pdf_dbscan_2d import Dbscan2D
 from distance.pdf_distance import Distance2D
 
 
