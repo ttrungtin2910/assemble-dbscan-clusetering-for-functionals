@@ -7,20 +7,32 @@ def run():
     # Declare param input
     step = 0.08
 
+    range = 2
+
     # Create grid data
     grid_x, grid_y = np.meshgrid(
-        np.arange(-6.5, 6.5 + step, step),
-        np.arange(-6.5, 6.5 + step, step)
+        np.arange(-range, range + step, step),
+        np.arange(-range, range + step, step)
     )
 
     # Create object
     object_dbscan_3d = Dbscan_3D()
 
+    # object_dbscan_3d.create_nonconvex_data()
+
     # Create dataset
-    data, label = object_dbscan_3d.create_dataset_random(
+    # data, label = object_dbscan_3d.create_dataset_random(
+    #     grid_x=grid_x,
+    #     grid_y=grid_y,
+    #     visualize=False
+    # )
+
+    # noisy_circles
+    point_data, data, label = object_dbscan_3d.data_noisy_circles(
+        n_samples=500,
         grid_x=grid_x,
         grid_y=grid_y,
-        visualize=False
+        # visualize=True
     )
 
     # Run algorithm
@@ -45,5 +57,6 @@ def run():
         f=data,
         cluster=label_infer,
         grid_x=grid_x,
-        grid_y=grid_y
+        grid_y=grid_y,
+        point_data = point_data
     )

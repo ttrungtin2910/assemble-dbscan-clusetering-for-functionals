@@ -16,6 +16,8 @@ def run():
     # Create object
     object_dbscan_2d = Dbscan2D()
 
+    object_dbscan_2d.create_nonconvex_data()
+
     # Create dataset
     data, label = object_dbscan_2d.create_dataset_random(
         grid=grid,

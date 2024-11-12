@@ -89,6 +89,114 @@ class Dbscan_3D:
             plt.show()
 
         return fi, label_true
+    
+    def data_noisy_circles(
+        self,
+        n_samples: int,
+        grid_x: np.ndarray,
+        grid_y: np.ndarray,
+        visualize: bool = False,
+    ):
+        """
+        Create a dataset of probability density functions (PDFs) based on
+        generated data points.
+
+        Parameters
+        ----------
+        n_samples: int
+            Number of sample need to create
+        grid_x : ndarray
+            A 2D array representing the grid of x-coordinates for evaluating
+            the PDFs.
+        grid_y : ndarray
+            A 2D array representing the grid of y-coordinates for evaluating
+            the PDFs.
+        visualize : bool, optional
+            If set to True, plots the contour of the generated PDFs
+            (default is False).
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - fi (list of ndarray): A list of PDF values evaluated over the
+            grid defined by x and y.
+            - label_true (list of int): A list of true labels corresponding
+            to each data point.
+        """
+        from sklearn import datasets
+        n_samples = 500
+        seed = 30
+
+        # Create noisy circle
+        noisy_circles = datasets.make_circles(n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed)
+
+        (f, label_true) = noisy_circles
+        fi = []
+
+        for i in range(n_samples):
+            # sig_j = 100*np.random.uniform(0.9, 1.1)
+            sig_j = 50
+            rv = multivariate_normal(mean=[f[:,0][i], f[:,1][i]], cov=np.eye(2) / sig_j)
+            fi_j = rv.pdf(np.c_[grid_x.ravel(), grid_y.ravel()]).reshape(grid_x.shape)
+
+            fi.append(fi_j)
+        if visualize:
+            plt.figure()
+
+            for fi_j in fi:
+                plt.contour(grid_x, grid_y, fi_j, levels=[5, 7, 10], alpha=0.5)
+
+            plt.scatter(f[:, 0], f[:, 1], s=10, color="r")
+
+            plt.title('Initial Data Points Contours')
+            plt.xlabel('X-axis')
+            plt.ylabel('Y-axis')
+            plt.show()
+        return f, fi, label_true
+    
+    def create_nonconvex_data(self):
+        from sklearn import datasets
+        # ============
+        n_samples = 500
+        seed = 30
+        noisy_circles = datasets.make_circles(n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed)
+        noisy_moons = datasets.make_moons(n_samples=n_samples, noise=0.05, random_state=seed)
+        blobs = datasets.make_blobs(n_samples=n_samples, random_state=seed)
+        rng = np.random.RandomState(seed)
+        no_structure = rng.rand(n_samples, 2), None
+
+        # Anisotropicly distributed data
+        random_state = 170
+        X, y = datasets.make_blobs(n_samples=n_samples, random_state=random_state)
+        transformation = [[0.6, -0.6], [-0.4, 0.8]]
+        X_aniso = np.dot(X, transformation)
+        aniso = (X_aniso, y)
+
+        # blobs with varied variances
+        varied = datasets.make_blobs(n_samples=n_samples, cluster_std=[1.0, 2.5, 0.5], random_state=random_state)
+
+        # List of datasets
+        datasets = [noisy_circles, noisy_moons, varied, aniso, blobs, no_structure]
+
+        # ============
+        # Plot datasets
+        # ============
+        plt.figure(figsize=(15, 10))
+        plt.subplots_adjust(left=0.02, right=0.98, bottom=0.05, top=0.9, wspace=0.05, hspace=0.2)
+
+        for i, dataset in enumerate(datasets):
+            X, y = dataset
+            # X = StandardScaler().fit_transform(X)  # Normalize dataset
+            
+            plt.subplot(2, 3, i + 1)
+            plt.scatter(X[:, 0], X[:, 1], s=10, color="b")
+            plt.title(f"Dataset {i + 1}")
+            plt.xticks(())
+            plt.yticks(())
+
+        plt.show()
+        plt.show()
 
     def run_algorithm(
         self,
@@ -206,7 +314,8 @@ class Dbscan_3D:
             f: np.ndarray,
             cluster: np.ndarray,
             grid_x: np.ndarray,
-            grid_y: np.ndarray
+            grid_y: np.ndarray,
+            point_data: bool = None
         ) -> None:
         """
         Plots DBSCAN clustering results in a 3D contour format with distinct
@@ -251,12 +360,13 @@ class Dbscan_3D:
             legend_text = f'Cluster #{i}' if i > 0 else 'Noise'
             
             for f_j in cluster_fi:
-                plt.contour(grid_x, grid_y, f_j, colors=[color], linewidths=1.5)
+                plt.contour(grid_x, grid_y, f_j, colors=[color], linewidths=1.5, alpha=0.1)
             
             # Append a proxy artist for the legend entry (only add one per cluster)
             legend_handles.append(
                 plt.Line2D([0], [0], color=color, lw=2, label=legend_text)
             )
+
             
         plt.title('3D Contour Plot for DBSCAN Clusters')
         plt.xlabel('X-axis')
@@ -265,5 +375,8 @@ class Dbscan_3D:
 
         # Add legend with the handles collected
         plt.legend(handles=legend_handles)
+
+        if point_data is not None:
+            plt.scatter(point_data[:, 0], point_data[:, 1], s=10, color="b",zorder=5)
 
         plt.show()

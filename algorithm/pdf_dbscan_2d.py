@@ -1,8 +1,10 @@
 # Import libraries
 import numpy as np
-from matplotlib import cm
 from scipy.stats import norm
+
+from matplotlib import cm
 import matplotlib.pyplot as plt
+
 from typing import Tuple, Callable
 
 class Dbscan2D:
