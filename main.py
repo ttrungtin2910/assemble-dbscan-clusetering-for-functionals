@@ -9,4 +9,5 @@ np.random.seed(random_seed)
 
 if __name__ == '__main__':
     # run_2d()
-    run_3d(data_type=1)
+    # run_3d(data_type=1)
+    run_3d(data_type=0)
