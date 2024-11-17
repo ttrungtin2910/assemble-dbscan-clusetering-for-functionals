@@ -3,11 +3,19 @@ from evaluate.metrics import ari
 from algorithm.pdf_dbscan_3d import Dbscan_3D
 from distance.pdf_distance import Distance3D
 
-def run():
+def run(data_type: int = 0):
+    '''
+    Parameters
+    ----------
+    data_type: int
+        - `0`: random data
+        - `1`: circle data
+    
+    '''
     # Declare param input
     step = 0.08
 
-    range = 2
+    range = 3
 
     # Create grid data
     grid_x, grid_y = np.meshgrid(
@@ -20,19 +28,18 @@ def run():
 
     # object_dbscan_3d.create_nonconvex_data()
 
-    # Create dataset
-    # data, label = object_dbscan_3d.create_dataset_random(
-    #     grid_x=grid_x,
-    #     grid_y=grid_y,
-    #     visualize=False
-    # )
+    if data_type == 0:
+        data_maker = object_dbscan_3d.create_dataset_random
+    elif data_type == 1:
+        data_maker = object_dbscan_3d.data_noisy_circles
+    
 
     # noisy_circles
-    point_data, data, label = object_dbscan_3d.data_noisy_circles(
+    point_data, data, label = data_maker(
         n_samples=500,
         grid_x=grid_x,
         grid_y=grid_y,
-        # visualize=True
+        visualize=True
     )
 
     # Run algorithm

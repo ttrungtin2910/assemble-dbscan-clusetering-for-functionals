@@ -17,9 +17,117 @@ class Dbscan_3D:
     - visualize_inference(self) -> None
     """
     def __init__(self):
-        ...
+        from sklearn import datasets
+        self.datasets_sklearn = datasets
+
+    def make_contours(
+            self,
+            data: np.ndarray,
+            grid_x: np.ndarray,
+            grid_y: np.ndarray,
+        ):
+        """
+        Create a list of probability density functions (PDFs) for each data 
+        point based on a generated covariance matrix and evaluate them over a 
+        specified grid of x and y coordinates.
+
+        Parameters
+        ----------
+        data : ndarray
+            A 2D array where each row represents a data point with x and y 
+            coordinates.
+        grid_x : ndarray
+            A 2D array representing the grid of x-coordinates for evaluating 
+            the PDFs.
+        grid_y : ndarray
+            A 2D array representing the grid of y-coordinates for evaluating 
+            the PDFs.
+
+        Returns
+        -------
+        list of ndarray
+            A list of PDF values evaluated over the grid defined by x and y.
+        """
+        # Get the number of data points
+        n_samples = data.shape[0]
+
+        fi = []  # List to store the PDF values for each data point
+
+        # Loop through each data point
+        for i in range(n_samples):
+            # Generate random scaling factors for the covariance matrix (x and y)
+            sig_j_x = 50 * np.random.uniform(0.7, 1.3)
+            sig_j_y = 50 * np.random.uniform(0.7, 1.3)
+
+            # Create the covariance matrix with the random scaling factors
+            cov_matrix = np.array([
+                [1 / sig_j_x, 0],
+                [0, 1 / sig_j_y]
+            ])
+
+            # Create a multivariate normal distribution for each data point
+            rv = multivariate_normal(mean=[data[:, 0][i], data[:, 1][i]], 
+                                    cov=cov_matrix)
+
+            # Evaluate the PDF over the grid and reshape to match the grid shape
+            fi_j = rv.pdf(np.c_[grid_x.ravel(), grid_y.ravel()]).reshape(grid_x.shape)
+
+            # Append the evaluated PDF to the list
+            fi.append(fi_j)
+        
+        # Return the list of PDFs
+        return fi
+
+        
+    def visualize_raw_data(self, raw_data, f_contours, grid_x, grid_y):
+        """
+        Visualize the initial raw data points and overlay the contours of the 
+        probability density functions (PDFs) for each data point on a 2D grid.
+
+        Parameters
+        ----------
+        raw_data : ndarray
+            A 2D array of raw data points, where each row contains the x and y 
+            coordinates.
+        f_contours : list of ndarray
+            A list of PDF values (contour levels) for each data point, generated 
+            by the `make_contours` function.
+        grid_x : ndarray
+            A 2D array representing the grid of x-coordinates for plotting the 
+            contours.
+        grid_y : ndarray
+            A 2D array representing the grid of y-coordinates for plotting the 
+            contours.
+
+        Returns
+        -------
+        None
+            This function does not return anything. It visualizes the data using 
+            `matplotlib`.
+        """
+        # Create a new figure for plotting
+        plt.figure()
+
+        # Loop through each set of contours (PDFs) and plot them
+        for fi_j in f_contours:
+            # Plot the contour levels (at 5, 7, and 10) with transparency (alpha=0.5)
+            plt.contour(grid_x, grid_y, fi_j, levels=[5, 7, 10], alpha=0.5)
+
+        # Plot the raw data points as red dots
+        plt.scatter(raw_data[:, 0], raw_data[:, 1], s=10, color="r")
+
+        # Set the title and labels for the plot
+        plt.title('Initial Data Points Contours')
+        plt.xlabel('X-axis')
+        plt.ylabel('Y-axis')
+
+        # Display the plot
+        plt.show()
+
+
     def create_dataset_random(
         self,
+        n_samples: int,
         grid_x: np.ndarray,
         grid_y: np.ndarray,
         visualize: bool = False,
@@ -30,6 +138,8 @@ class Dbscan_3D:
 
         Parameters
         ----------
+        n_samples: int
+            Number of sample need to create
         grid_x : ndarray
             A 2D array representing the grid of x-coordinates for evaluating
             the PDFs.
@@ -50,45 +160,58 @@ class Dbscan_3D:
             to each data point.
         """
         # Means and covariances
-        mu1 = [1.4, -2]
-        mu2 = [-1.5, -2]
-        mu3 = [0, 2.4]
-        sigma1 = np.array([[0.3, 0], [0, 0.3]])
-        sigma2 = np.array([[0.1, 0], [0, 0.3]])
-        sigma3 = np.array([[0.2, 0.1], [0.2, 0.3]])
+        mu1 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
+        mu2 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
+        mu3 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
+
+        # Split n sample into 3 cluster
+        num1 = np.random.randint(0, n_samples + 1)
+        num2 = np.random.randint(0, n_samples - num1 + 1)
+        num3 = n_samples - num1 - num2  # Số thứ 3 sẽ là phần còn lại
+
+        sigma1 = np.array(
+            [
+                [np.random.uniform(0.01, 0.05), 0],
+                [0, np.random.uniform(0.01, 0.05)]
+            ])
+        
+        sigma2 =  np.array(
+            [
+                [np.random.uniform(0.01, 0.05), 0],
+                [0, np.random.uniform(0.01, 0.05)]
+            ])
+        sigma3 =  np.array(
+            [
+                [np.random.uniform(0.01, 0.05), 0],
+                [0, np.random.uniform(0.01, 0.05)]
+            ])
 
         # Generating data points
-        data1 = np.random.multivariate_normal(mu1, sigma1, 50)
-        data2 = np.random.multivariate_normal(mu2, sigma2, 50)
-        data3 = np.random.multivariate_normal(mu3, sigma3, 50)
+        data1 = np.random.multivariate_normal(mu1, sigma1, num1)
+        data2 = np.random.multivariate_normal(mu2, sigma2, num2)
+        data3 = np.random.multivariate_normal(mu3, sigma3, num3)
 
+        data = np.vstack((data1, data2, data3))
 
-        mu = np.vstack((data1, data2, data3))
+        label_true = [0]*num1 + [1]*num2 + [2]*num3
 
-        label_true = [0]*50 + [1]*50 + [2]*50
+        # Make counters
+        f_contours = self.make_contours(
+            data=data,
+            grid_x=grid_x,
+            grid_y=grid_y
+        )
 
-        # Initialize variables for contour plotting
-        fi = []
-        sig = []
-        num_sample = mu.shape[0]
-
-        for j in range(num_sample):
-            sig_j = 1*np.random.uniform(0.5, 1.5)#3 + 5 * np.random.rand()
-            rv = multivariate_normal(mean=mu[j], cov=np.eye(2) / sig_j)
-            fi_j = rv.pdf(np.c_[grid_x.ravel(), grid_y.ravel()]).reshape(grid_x.shape)
-            # Check if normalization
-            fi.append(fi_j)
         # Plotting the contours
         if visualize:
-            plt.figure()
-            for fi_j in fi:
-                plt.contour(grid_x, grid_y, fi_j)
-            plt.title('Initial Data Points Contours')
-            plt.xlabel('X-axis')
-            plt.ylabel('Y-axis')
-            plt.show()
+            self.visualize_raw_data(
+                raw_data = data,
+                f_contours = f_contours,
+                grid_x = grid_x,
+                grid_y = grid_y
+            )
 
-        return fi, label_true
+        return data, f_contours, label_true
     
     def data_noisy_circles(
         self,
@@ -124,36 +247,31 @@ class Dbscan_3D:
             - label_true (list of int): A list of true labels corresponding
             to each data point.
         """
-        from sklearn import datasets
-        n_samples = 500
+        # n_samples = n_samples
         seed = 30
 
         # Create noisy circle
-        noisy_circles = datasets.make_circles(n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed)
+        noisy_circles = self.datasets_sklearn.make_circles(n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed)
 
-        (f, label_true) = noisy_circles
-        fi = []
+        (data, label_true) = noisy_circles
 
-        for i in range(n_samples):
-            # sig_j = 100*np.random.uniform(0.9, 1.1)
-            sig_j = 50
-            rv = multivariate_normal(mean=[f[:,0][i], f[:,1][i]], cov=np.eye(2) / sig_j)
-            fi_j = rv.pdf(np.c_[grid_x.ravel(), grid_y.ravel()]).reshape(grid_x.shape)
+        # Make counters
+        f_contours = self.make_contours(
+            data=data,
+            grid_x=grid_x,
+            grid_y=grid_y
+        )
 
-            fi.append(fi_j)
+        # Plotting the contours
         if visualize:
-            plt.figure()
+            self.visualize_raw_data(
+                raw_data = data,
+                f_contours = f_contours,
+                grid_x = grid_x,
+                grid_y = grid_y
+            )
 
-            for fi_j in fi:
-                plt.contour(grid_x, grid_y, fi_j, levels=[5, 7, 10], alpha=0.5)
-
-            plt.scatter(f[:, 0], f[:, 1], s=10, color="r")
-
-            plt.title('Initial Data Points Contours')
-            plt.xlabel('X-axis')
-            plt.ylabel('Y-axis')
-            plt.show()
-        return f, fi, label_true
+        return data, f_contours, label_true
     
     def create_nonconvex_data(self):
         from sklearn import datasets
@@ -360,7 +478,7 @@ class Dbscan_3D:
             legend_text = f'Cluster #{i}' if i > 0 else 'Noise'
             
             for f_j in cluster_fi:
-                plt.contour(grid_x, grid_y, f_j, colors=[color], linewidths=1.5, alpha=0.1)
+                plt.contour(grid_x, grid_y, f_j, colors=[color],levels=[5, 7, 10], linewidths=1.5, alpha=0.1)
             
             # Append a proxy artist for the legend entry (only add one per cluster)
             legend_handles.append(
@@ -377,6 +495,6 @@ class Dbscan_3D:
         plt.legend(handles=legend_handles)
 
         if point_data is not None:
-            plt.scatter(point_data[:, 0], point_data[:, 1], s=10, color="b",zorder=5)
+            plt.scatter(point_data[:, 0], point_data[:, 1], s=10, color="black",zorder=5)
 
         plt.show()
