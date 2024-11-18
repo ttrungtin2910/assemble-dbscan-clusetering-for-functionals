@@ -11,18 +11,12 @@ def run(data_type: int = 0):
     data_type: int
         - `0`: random data
         - `1`: circle data
+        - `2`: moon data
     
     '''
     # Declare param input
     logger.info('Initializing object')
     step = 0.08
-    range = 3
-
-    # Create grid data
-    grid_x, grid_y = np.meshgrid(
-        np.arange(-range, range + step, step),
-        np.arange(-range, range + step, step)
-    )
 
     # Create object
     object_dbscan_3d = Dbscan_3D()
@@ -30,19 +24,16 @@ def run(data_type: int = 0):
 
     # Select method to create datapoint
     logger.info('START Creating data')
-    if data_type == 0:
-        data_maker = object_dbscan_3d.create_dataset_random
-    elif data_type == 1:
-        data_maker = object_dbscan_3d.data_noisy_circles
-    
 
-    # noisy_circles
-    point_data, data, label = data_maker(
+
+    point_data, data, label, grid_x, grid_y = object_dbscan_3d.create_dataset(
         n_samples=500,
-        grid_x=grid_x,
-        grid_y=grid_y,
+        step = step,
+        index_datatype=data_type,
         visualize=True
     )
+    
+
     logger.info('-'*50)
 
 

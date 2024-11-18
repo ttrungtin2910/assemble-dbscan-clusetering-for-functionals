@@ -24,7 +24,98 @@ class Dbscan_3D:
         self.datasets_sklearn = datasets
         self.outdir = 'output'
         self.current_time = datetime.now().strftime('%y%m%d_%H%M%S')
-        pass
+
+        self.dict_data_type = {
+            0: 'random_data',
+            1: 'noisy_circles',
+            2: 'noisy_moons',
+            3: 'varied',
+            4: 'aniso',
+            5: 'blobs',
+            6: 'no_structure'
+        }
+
+    def make_random_datapoints(
+            self,
+            n_samples: int,
+            index_datatype: int,
+        ):
+        data_points_type = self.dict_data_type.get(index_datatype, 'random_data')
+        if data_points_type == 'random_data':
+            # Means and covariances
+            mu1 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
+            mu2 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
+            mu3 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
+
+            # Split n sample into 3 cluster
+            num1 = np.random.randint(0, n_samples + 1)
+            num2 = np.random.randint(0, n_samples - num1 + 1)
+            num3 = n_samples - num1 - num2  # Số thứ 3 sẽ là phần còn lại
+
+            sigma1 = np.array(
+                [
+                    [np.random.uniform(0.01, 0.05), 0],
+                    [0, np.random.uniform(0.01, 0.05)]
+                ])
+            
+            sigma2 =  np.array(
+                [
+                    [np.random.uniform(0.01, 0.05), 0],
+                    [0, np.random.uniform(0.01, 0.05)]
+                ])
+            sigma3 =  np.array(
+                [
+                    [np.random.uniform(0.01, 0.05), 0],
+                    [0, np.random.uniform(0.01, 0.05)]
+                ])
+
+            # Generating data points
+            data1 = np.random.multivariate_normal(mu1, sigma1, num1)
+            data2 = np.random.multivariate_normal(mu2, sigma2, num2)
+            data3 = np.random.multivariate_normal(mu3, sigma3, num3)
+
+            data = np.vstack((data1, data2, data3))
+            label_true = [0]*num1 + [1]*num2 + [2]*num3
+        else:
+            if data_points_type == 'noisy_circles':
+                random_data_by_distribution = self.datasets_sklearn.make_circles(
+                    n_samples=n_samples, factor=0.5, noise=0.05
+                )
+
+            elif data_points_type == 'noisy_moons':
+                random_data_by_distribution = self.datasets_sklearn.make_moons(
+                    n_samples=n_samples, noise=0.05
+                )
+                
+            elif data_points_type == 'varied':
+                random_data_by_distribution = self.datasets_sklearn.make_blobs(
+                    n_samples=n_samples,
+                    cluster_std=[0.1, 0.3, 0.25],
+                    center_box = (-2, 2)
+                )
+            
+            elif data_points_type == 'aniso':
+                X, y = self.datasets_sklearn.make_blobs(
+                    n_samples=n_samples,
+                    center_box = (-2, 2)
+                    )
+                transformation = [[0.6, -0.6], [-0.4, 0.8]]
+                X_aniso = np.dot(X, transformation)
+                random_data_by_distribution = (X_aniso, y)
+
+            elif data_points_type == 'blobs':
+                random_data_by_distribution = self.datasets_sklearn.make_blobs(
+                    n_samples=n_samples,
+                    center_box = (-2, 2)
+                )
+
+            elif data_points_type == 'no_structure':
+                rng = np.random.RandomState(200)
+                random_data_by_distribution = rng.rand(n_samples, 2), None
+
+            (data, label_true) = random_data_by_distribution
+        
+        return data, label_true
 
     def make_contours(
             self,
@@ -116,7 +207,7 @@ class Dbscan_3D:
 
         filename = os.path.join(
             self.outdir,
-            f"{self.current_time}_raw_data.jpg"
+            f"{self.current_time}_raw_data.png"
         )
 
         # Create a new figure for plotting
@@ -136,140 +227,75 @@ class Dbscan_3D:
         plt.ylabel('Y-axis')
 
         # Save the plot to the specified file
-        plt.savefig(filename)  # Save the plot as an image file
+        plt.savefig(filename, dpi = 300)  # Save the plot as an image file
 
         # Optionally close the plot to free up memory
         plt.close()
 
-    def create_dataset_random(
-        self,
-        n_samples: int,
-        grid_x: np.ndarray,
-        grid_y: np.ndarray,
-        visualize: bool = False,
-    ):
+    @staticmethod
+    def add_padding(
+            min: float,
+            max: float,
+            ratio: float = 0.2
+        ):
         """
-        Create a dataset of probability density functions (PDFs) based on
-        generated data points.
+        Add padding to a given range (min, max) by expanding both ends of the range
+        by a specified ratio.
 
-        Parameters
-        ----------
-        n_samples: int
-            Number of sample need to create
-        grid_x : ndarray
-            A 2D array representing the grid of x-coordinates for evaluating
-            the PDFs.
-        grid_y : ndarray
-            A 2D array representing the grid of y-coordinates for evaluating
-            the PDFs.
-        visualize : bool, optional
-            If set to True, plots the contour of the generated PDFs
-            (default is False).
-
-        Returns
-        -------
-        tuple
-            A tuple containing:
-            - fi (list of ndarray): A list of PDF values evaluated over the
-            grid defined by x and y.
-            - label_true (list of int): A list of true labels corresponding
-            to each data point.
-        """
-        # Means and covariances
-        mu1 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
-        mu2 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
-        mu3 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
-
-        # Split n sample into 3 cluster
-        num1 = np.random.randint(0, n_samples + 1)
-        num2 = np.random.randint(0, n_samples - num1 + 1)
-        num3 = n_samples - num1 - num2  # Số thứ 3 sẽ là phần còn lại
-
-        sigma1 = np.array(
-            [
-                [np.random.uniform(0.01, 0.05), 0],
-                [0, np.random.uniform(0.01, 0.05)]
-            ])
+        This function calculates the amount of padding based on the difference between
+        `max` and `min` values and adds the padding equally to both ends of the range.
         
-        sigma2 =  np.array(
-            [
-                [np.random.uniform(0.01, 0.05), 0],
-                [0, np.random.uniform(0.01, 0.05)]
-            ])
-        sigma3 =  np.array(
-            [
-                [np.random.uniform(0.01, 0.05), 0],
-                [0, np.random.uniform(0.01, 0.05)]
-            ])
-
-        # Generating data points
-        data1 = np.random.multivariate_normal(mu1, sigma1, num1)
-        data2 = np.random.multivariate_normal(mu2, sigma2, num2)
-        data3 = np.random.multivariate_normal(mu3, sigma3, num3)
-
-        data = np.vstack((data1, data2, data3))
-
-        label_true = [0]*num1 + [1]*num2 + [2]*num3
-
-        # Make counters
-        f_contours = self.make_contours(
-            data=data,
-            grid_x=grid_x,
-            grid_y=grid_y
-        )
-
-        # Plotting the contours
-        if visualize:
-            self.visualize_raw_data(
-                raw_data = data,
-                f_contours = f_contours,
-                grid_x = grid_x,
-                grid_y = grid_y
-            )
-
-        return data, f_contours, label_true
-    
-    def data_noisy_circles(
-        self,
-        n_samples: int,
-        grid_x: np.ndarray,
-        grid_y: np.ndarray,
-        visualize: bool = False,
-    ):
-        """
-        Create a dataset of probability density functions (PDFs) based on
-        generated data points.
-
         Parameters
         ----------
-        n_samples: int
-            Number of sample need to create
-        grid_x : ndarray
-            A 2D array representing the grid of x-coordinates for evaluating
-            the PDFs.
-        grid_y : ndarray
-            A 2D array representing the grid of y-coordinates for evaluating
-            the PDFs.
-        visualize : bool, optional
-            If set to True, plots the contour of the generated PDFs
-            (default is False).
+        min : float
+            The minimum value of the range.
+        max : float
+            The maximum value of the range.
+        ratio : float, optional
+            The padding ratio to apply to the range. The default is 0.2 (20% padding).
+            The padding is applied equally to both the lower and upper bounds of the range.
 
         Returns
         -------
-        tuple
-            A tuple containing:
-            - fi (list of ndarray): A list of PDF values evaluated over the
-            grid defined by x and y.
-            - label_true (list of int): A list of true labels corresponding
-            to each data point.
+        tuple of floats
+            A tuple containing the new `min` and `max` values after padding.
+            The first element is the new minimum value, and the second element is
+            the new maximum value.
         """
-        # n_samples = n_samples
-        seed = 30
+        padding_value = (max - min) * ratio / 2
+        return min - padding_value, max + padding_value
 
-        # Create noisy circle
-        noisy_circles = self.datasets_sklearn.make_circles(n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed)
 
-        (data, label_true) = noisy_circles
+    def create_dataset(
+            self,
+            n_samples: int,
+            step: float,
+            index_datatype: int = 0,
+            visualize: bool = False,
+        ):
+        data, label_true = self.make_random_datapoints(
+            n_samples=n_samples,
+            index_datatype=index_datatype
+        )
+        padding_ratio = 0.2
+        
+        min_x, max_x = self.add_padding(
+            min = data[:,0].min(),
+            max = data[:,0].max(),
+            ratio = padding_ratio
+        )
+
+        min_y, max_y = self.add_padding(
+            min = data[:,1].min(),
+            max = data[:,1].max(),
+            ratio = padding_ratio
+        )
+
+        # Create grid x and grid y
+        grid_x, grid_y = np.meshgrid(
+            np.arange(min_x, max_x + step, step),
+            np.arange(min_y, max_y + step, step)
+        )
 
         # Make counters
         f_contours = self.make_contours(
@@ -287,50 +313,7 @@ class Dbscan_3D:
                 grid_y = grid_y
             )
 
-        return data, f_contours, label_true
-    
-    def create_nonconvex_data(self):
-        from sklearn import datasets
-        # ============
-        n_samples = 500
-        seed = 30
-        noisy_circles = datasets.make_circles(n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed)
-        noisy_moons = datasets.make_moons(n_samples=n_samples, noise=0.05, random_state=seed)
-        blobs = datasets.make_blobs(n_samples=n_samples, random_state=seed)
-        rng = np.random.RandomState(seed)
-        no_structure = rng.rand(n_samples, 2), None
-
-        # Anisotropicly distributed data
-        random_state = 170
-        X, y = datasets.make_blobs(n_samples=n_samples, random_state=random_state)
-        transformation = [[0.6, -0.6], [-0.4, 0.8]]
-        X_aniso = np.dot(X, transformation)
-        aniso = (X_aniso, y)
-
-        # blobs with varied variances
-        varied = datasets.make_blobs(n_samples=n_samples, cluster_std=[1.0, 2.5, 0.5], random_state=random_state)
-
-        # List of datasets
-        datasets = [noisy_circles, noisy_moons, varied, aniso, blobs, no_structure]
-
-        # ============
-        # Plot datasets
-        # ============
-        plt.figure(figsize=(15, 10))
-        plt.subplots_adjust(left=0.02, right=0.98, bottom=0.05, top=0.9, wspace=0.05, hspace=0.2)
-
-        for i, dataset in enumerate(datasets):
-            X, y = dataset
-            # X = StandardScaler().fit_transform(X)  # Normalize dataset
-            
-            plt.subplot(2, 3, i + 1)
-            plt.scatter(X[:, 0], X[:, 1], s=10, color="b")
-            plt.title(f"Dataset {i + 1}")
-            plt.xticks(())
-            plt.yticks(())
-
-        plt.show()
-        plt.show()
+        return data, f_contours, label_true, grid_x, grid_y
 
     def run_algorithm(
         self,
@@ -482,7 +465,7 @@ class Dbscan_3D:
 
         filename = os.path.join(
             self.outdir,
-            f"{self.current_time}_cluster_result.jpg"
+            f"{self.current_time}_cluster_result.png"
         )
 
         # Plotting the clusters
@@ -520,7 +503,7 @@ class Dbscan_3D:
             plt.scatter(point_data[:, 0], point_data[:, 1], s=10, color="black", zorder=5)
 
         # Save the plot to the specified file
-        plt.savefig(filename)  # Save the plot as an image file
+        plt.savefig(filename, dpi = 300)  # Save the plot as an image file
 
         # Close the plot to free up memory
         plt.close()
