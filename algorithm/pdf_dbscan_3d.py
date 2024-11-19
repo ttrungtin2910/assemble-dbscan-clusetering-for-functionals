@@ -10,6 +10,9 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 
+from ensemble.data_tool import create_similarity_matrix
+from ensemble.visualization import visualize_matrix_as_graph_with_coordinates
+
 class Dbscan_3D:
     """
     Methods
@@ -36,38 +39,64 @@ class Dbscan_3D:
         }
 
     def make_random_datapoints(
-            self,
-            n_samples: int,
-            index_datatype: int,
-        ):
-        data_points_type = self.dict_data_type.get(index_datatype, 'random_data')
+        self,
+        n_samples: int,
+        data_points_type: str,
+        random_seed: int = 24,
+    ):
+        """
+        Generates random 2D data points for clustering experiments based on the 
+        specified data type and configuration.
+
+        Parameters
+        ----------
+        n_samples : int
+            The total number of data points to generate.
+        data_points_type : str
+            Type of data distribution to generate. Supported values are:
+            - `random_data`: Randomly distributed data points split into 3 clusters.
+            - `noisy_circles`: Data points arranged in circular clusters with noise.
+            - `noisy_moons`: Data points forming crescent-shaped clusters with noise.
+            - `varied`: Clusters of varying density and spread.
+            - `aniso`: Anisotropically distributed clusters.
+            - `blobs`: Gaussian blobs as clusters.
+            - `no_structure`: Uniformly distributed random data points.
+        random_seed : int, optional, default=24
+            Seed for reproducibility of random number generation.
+
+        Returns
+        -------
+        data : np.ndarray
+            A 2D array of shape (n_samples, 2) containing the generated data points.
+        label_true : list or np.ndarray
+            The true cluster labels for the generated data points. Each label is an 
+            integer representing the cluster to which the point belongs.
+
+        Notes
+        -----
+        - For 'random_data', three clusters are created with random means, 
+        covariances, and sample counts.
+        - For 'aniso', an anisotropic transformation is applied to the data points.
+        - If `label_true` is None, the data has no specific structure or clustering.
+        """
+        # data_points_type = self.dict_data_type.get(index_datatype, 'random_data')
         if data_points_type == 'random_data':
             # Means and covariances
             mu1 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
             mu2 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
             mu3 = [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
 
-            # Split n sample into 3 cluster
+            # Split n sample into 3 clusters
             num1 = np.random.randint(0, n_samples + 1)
             num2 = np.random.randint(0, n_samples - num1 + 1)
-            num3 = n_samples - num1 - num2  # Số thứ 3 sẽ là phần còn lại
+            num3 = n_samples - num1 - num2
 
-            sigma1 = np.array(
-                [
-                    [np.random.uniform(0.01, 0.05), 0],
-                    [0, np.random.uniform(0.01, 0.05)]
-                ])
-            
-            sigma2 =  np.array(
-                [
-                    [np.random.uniform(0.01, 0.05), 0],
-                    [0, np.random.uniform(0.01, 0.05)]
-                ])
-            sigma3 =  np.array(
-                [
-                    [np.random.uniform(0.01, 0.05), 0],
-                    [0, np.random.uniform(0.01, 0.05)]
-                ])
+            sigma1 = np.array([[np.random.uniform(0.01, 0.05), 0],
+                            [0, np.random.uniform(0.01, 0.05)]])
+            sigma2 = np.array([[np.random.uniform(0.01, 0.05), 0],
+                            [0, np.random.uniform(0.01, 0.05)]])
+            sigma3 = np.array([[np.random.uniform(0.01, 0.05), 0],
+                            [0, np.random.uniform(0.01, 0.05)]])
 
             # Generating data points
             data1 = np.random.multivariate_normal(mu1, sigma1, num1)
@@ -75,46 +104,45 @@ class Dbscan_3D:
             data3 = np.random.multivariate_normal(mu3, sigma3, num3)
 
             data = np.vstack((data1, data2, data3))
-            label_true = [0]*num1 + [1]*num2 + [2]*num3
+            label_true = [0] * num1 + [1] * num2 + [2] * num3
         else:
             if data_points_type == 'noisy_circles':
                 random_data_by_distribution = self.datasets_sklearn.make_circles(
-                    n_samples=n_samples, factor=0.5, noise=0.05
+                    n_samples=n_samples, factor=0.5, noise=0.05, random_state=random_seed
                 )
-
             elif data_points_type == 'noisy_moons':
                 random_data_by_distribution = self.datasets_sklearn.make_moons(
-                    n_samples=n_samples, noise=0.05
+                    n_samples=n_samples, noise=0.05, random_state=random_seed
                 )
-                
             elif data_points_type == 'varied':
                 random_data_by_distribution = self.datasets_sklearn.make_blobs(
                     n_samples=n_samples,
                     cluster_std=[0.1, 0.3, 0.25],
-                    center_box = (-2, 2)
+                    center_box=(-2, 2),
+                    random_state=random_seed
                 )
-            
             elif data_points_type == 'aniso':
                 X, y = self.datasets_sklearn.make_blobs(
                     n_samples=n_samples,
-                    center_box = (-2, 2)
-                    )
+                    cluster_std=0.2,
+                    center_box=(-2, 2),
+                    random_state=random_seed
+                )
                 transformation = [[0.6, -0.6], [-0.4, 0.8]]
                 X_aniso = np.dot(X, transformation)
                 random_data_by_distribution = (X_aniso, y)
-
             elif data_points_type == 'blobs':
                 random_data_by_distribution = self.datasets_sklearn.make_blobs(
                     n_samples=n_samples,
-                    center_box = (-2, 2)
+                    center_box=(-2, 2),
+                    random_state=random_seed
                 )
-
             elif data_points_type == 'no_structure':
-                rng = np.random.RandomState(200)
+                rng = np.random.RandomState(random_seed)
                 random_data_by_distribution = rng.rand(n_samples, 2), None
 
             (data, label_true) = random_data_by_distribution
-        
+
         return data, label_true
 
     def make_contours(
@@ -176,7 +204,14 @@ class Dbscan_3D:
         return fi
 
         
-    def visualize_raw_data(self, raw_data, f_contours, grid_x, grid_y):
+    def visualize_raw_data(
+            self,
+            raw_data: np.ndarray,
+            f_contours: np.ndarray,
+            grid_x: np.ndarray,
+            grid_y: np.ndarray,
+            name: str
+            ):
         """
         Visualize the initial raw data points and overlay the contours of the 
         probability density functions (PDFs) for each data point on a 2D grid.
@@ -222,7 +257,7 @@ class Dbscan_3D:
         plt.scatter(raw_data[:, 0], raw_data[:, 1], s=10, color="r")
 
         # Set the title and labels for the plot
-        plt.title('Initial Data Points Contours')
+        plt.title(f'Initial Data Points Contours: {name}')
         plt.xlabel('X-axis')
         plt.ylabel('Y-axis')
 
@@ -265,17 +300,18 @@ class Dbscan_3D:
         padding_value = (max - min) * ratio / 2
         return min - padding_value, max + padding_value
 
-
     def create_dataset(
             self,
             n_samples: int,
             step: float,
-            index_datatype: int = 0,
+            data_points_type: str,
+            random_seed: int,
             visualize: bool = False,
         ):
         data, label_true = self.make_random_datapoints(
             n_samples=n_samples,
-            index_datatype=index_datatype
+            data_points_type=data_points_type,
+            random_seed=random_seed
         )
         padding_ratio = 0.2
         
@@ -310,7 +346,8 @@ class Dbscan_3D:
                 raw_data = data,
                 f_contours = f_contours,
                 grid_x = grid_x,
-                grid_y = grid_y
+                grid_y = grid_y,
+                name = f"{data_points_type}_{random_seed}"
             )
 
         return data, f_contours, label_true, grid_x, grid_y
@@ -433,6 +470,8 @@ class Dbscan_3D:
             grid_x: np.ndarray,
             grid_y: np.ndarray,
             point_data: np.ndarray = None,
+            name: str = '',
+            description: str = ''
         ) -> None:
         """
         Plots DBSCAN clustering results in a 3D contour format with distinct
@@ -453,6 +492,10 @@ class Dbscan_3D:
         point_data : np.ndarray, optional
             If provided, scatter points will be plotted in black on top of the 
             contours.
+        name: str, optional
+            Name of data type
+        description: str, optional
+            Description use in tile of plot
 
         Notes
         -----
@@ -483,7 +526,7 @@ class Dbscan_3D:
             legend_text = f'Cluster #{i}' if i > 0 else 'Noise'
             
             for f_j in cluster_fi:
-                plt.contour(grid_x, grid_y, f_j, colors=[color], levels=[5, 7, 10], 
+                plt.contour(grid_x, grid_y, f_j, colors=[color], levels=[5, 7, 10,100 ], 
                             linewidths=1.5, alpha=0.1)
             
             # Append a proxy artist for the legend entry (only add one per cluster)
@@ -491,19 +534,95 @@ class Dbscan_3D:
                 plt.Line2D([0], [0], color=color, lw=2, label=legend_text)
             )
 
-        plt.title('3D Contour Plot for DBSCAN Clusters')
+        plt.title(f'3D Contour Plot for DBSCAN Clusters: {name} \n {description}')
         plt.xlabel('X-axis')
         plt.ylabel('Y-axis')
         plt.grid(True)
 
-        # Add legend with the handles collected
-        plt.legend(handles=legend_handles)
+        plt.legend(handles=legend_handles, loc='lower left', bbox_to_anchor=(0, 0))
 
         if point_data is not None:
             plt.scatter(point_data[:, 0], point_data[:, 1], s=10, color="black", zorder=5)
 
         # Save the plot to the specified file
-        plt.savefig(filename, dpi = 300)  # Save the plot as an image file
+        plt.savefig(filename, dpi = 300, bbox_inches='tight')  # Save the plot as an image file
+
+        # Close the plot to free up memory
+        plt.close()
+
+    
+    def visualize_result_as_graph(
+            self,
+            label_infer: list,
+            point_data: np.ndarray,
+        ):
+        """
+        Visualizes clustering results as graph-based representations for each cluster, 
+        using similarity matrices and point coordinates.
+
+        Parameters
+        ----------
+        label_infer : list
+            A list of cluster labels inferred for each data point. Each element 
+            represents the cluster assignment of the corresponding point in `point_data`.
+        point_data : np.ndarray
+            A 2D array of shape (n_samples, n_features) representing the data points. 
+            Each row corresponds to a data point, and columns represent its features.
+
+        Notes
+        -----
+        - The function creates a grid of subplots where each subplot represents the 
+        graph visualization of one cluster.
+        - The similarity matrix for each cluster is generated using a helper function 
+        `create_similarity_matrix`.
+        - Graph visualization is done by `visualize_matrix_as_graph_with_coordinates`, 
+        which plots the graph with cluster-specific data points and similarity matrix.
+        - Unused subplots in the grid are hidden.
+        - The final visualization is saved as an image file in the specified output directory.
+
+        Saves
+        -----
+        A PNG file named `<timestamp>_cluster_result_graph_visualization.png` is saved 
+        in the directory `self.outdir` with high resolution (300 dpi).
+        """
+
+        # similarity_matrix = create_similarity_matrix(label_infer)
+        num_clusters = set(label_infer)
+
+        num_cols = 2  # Number of columns in the subplot grid
+        num_rows = (len(num_clusters) + num_cols - 1) // num_cols  # Calculate the number of rows needed
+
+        # Create a grid of subplots
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 10))
+        axes = axes.flatten()  # Flatten the 2D array of axes into a 1D array for easy access
+
+        # Loop through each cluster and plot the corresponding graph
+        for i, index_cluster in enumerate(num_clusters):
+            # Create a mask for the current cluster
+            consider_list = [-1 if element == index_cluster else 0 for element in label_infer]
+
+            # Generate the similarity matrix for the current cluster
+            similarity_matrix = create_similarity_matrix(consider_list)
+
+            # Call the visualization function to plot on the corresponding subplot
+            visualize_matrix_as_graph_with_coordinates(
+                matrix=similarity_matrix,
+                list_points=point_data,
+                index_cluster=index_cluster,
+                ax=axes[i]
+            )
+
+        # Hide any unused subplots
+        for j in range(len(num_clusters), len(axes)):
+            axes[j].axis('off')
+
+        filename = os.path.join(
+            self.outdir,
+            f"{self.current_time}_cluster_result_graph_visualization.png"
+        )
+
+        # Save the plot to the specified file
+        plt.savefig(filename, dpi = 300, bbox_inches='tight')  # Save the plot as an image file
 
         # Close the plot to free up memory
         plt.close()
