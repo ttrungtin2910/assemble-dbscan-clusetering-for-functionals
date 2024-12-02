@@ -464,96 +464,103 @@ class Dbscan_3D:
         return label
 
     def visualize_inference(
-            self,
-            f: np.ndarray,
-            cluster: np.ndarray,
-            grid_x: np.ndarray,
-            grid_y: np.ndarray,
-            point_data: np.ndarray = None,
-            name: str = '',
-            description: str = ''
-        ) -> None:
+        self,
+        f: np.ndarray,
+        cluster: np.ndarray,
+        grid_x: np.ndarray,
+        grid_y: np.ndarray,
+        point_data: np.ndarray = None,
+        name: str = '',
+        description: str = '',
+        ax=None
+    ):
         """
-        Plots DBSCAN clustering results in a 3D contour format with distinct
-        colors for each cluster. Saves the plot to a file.
-
+        Visualizes DBSCAN clustering results as 3D contours with distinct colors for
+        each cluster. Optionally, scatter points can be plotted on top of the contours.
+        
         Parameters
         ----------
         f : np.ndarray
-            A 3D array containing data points to be plotted, with each
-            element representing a 2D contour for a cluster.
+            A 3D array of shape (n, h, w) where each slice `f[j]` contains the 2D 
+            contour data for the j-th cluster.
         cluster : np.ndarray
-            A 1D array of cluster labels, where noise points are labeled as 0,
-            and other integers represent specific clusters.
+            A 1D array of shape (n,) containing cluster labels for each data point.
+            Noise points are labeled as 0, and other integers represent specific clusters.
         grid_x : np.ndarray
-            A 1D array of x-axis coordinates used for the contour plot.
+            A 1D array representing the x-axis coordinates for the contour plot.
         grid_y : np.ndarray
-            A 1D array of y-axis coordinates used for the contour plot.
+            A 1D array representing the y-axis coordinates for the contour plot.
         point_data : np.ndarray, optional
-            If provided, scatter points will be plotted in black on top of the 
-            contours.
-        name: str, optional
-            Name of data type
-        description: str, optional
-            Description use in tile of plot
+            A 2D array of shape (m, 2), where each row represents a scatter point 
+            plotted on top of the contours. Default is None.
+        name : str, optional
+            A string representing the data type being visualized, used in the plot title.
+        description : str, optional
+            A description string displayed in the title for additional context.
+        ax : matplotlib.axes.Axes, optional
+            The axis object where the plot will be drawn. If not provided, a new 
+            axis will be created.
 
         Notes
         -----
-        - Each cluster is assigned a distinct color from an HSV colormap.
-        - A legend is created based on cluster numbers, including a 'Noise'
-        label for unclustered points.
+        - The function assigns unique colors to each cluster using an HSV colormap.
+        - Noise points are visualized with black contours.
+        - If `point_data` is provided, it is plotted as black scatter points.
+        - The function can either draw the plot on the provided axis or save it directly.
+
+        Returns
+        -------
+        None
+            The function modifies the provided `ax` object or creates a standalone
+            figure if no axis is provided.
         """
-        # Make directory
-        os.makedirs(self.outdir, exist_ok=True)
+        # If no axis is provided, create a new figure and axis
+        if ax is None:
+            fig, ax = plt.subplots()
 
-        filename = os.path.join(
-            self.outdir,
-            f"{self.current_time}_cluster_result.png"
-        )
-
-        # Plotting the clusters
+        # Determine the number of clusters
         k = int(cluster.max())
         n = len(cluster)
 
+        # Initialize the colormap for clusters
+        colors = cm.hsv(np.linspace(0, 1, k + 1))
         legend_handles = []
 
-        colors = cm.hsv(np.linspace(0, 1, k + 1))
-
-        plt.figure()
+        # Plot contours for each cluster
         for i in range(0, k + 1):
+            # Extract all slices corresponding to cluster i
             cluster_fi = [f[j] for j in range(n) if cluster[j] == i]
+
+            # Set color for the cluster (black for noise)
             color = colors[i - 1] if i > 0 else [0, 0, 0]
             legend_text = f'Cluster #{i}' if i > 0 else 'Noise'
-            
+
+            # Plot contours for this cluster
             for f_j in cluster_fi:
-                plt.contour(grid_x, grid_y, f_j, colors=[color], levels=[5, 7, 10,100 ], 
-                            linewidths=1.5, alpha=0.1)
-            
-            # Append a proxy artist for the legend entry (only add one per cluster)
+                ax.contour(grid_x, grid_y, f_j, colors=[color], levels=[5, 7, 10, 100],
+                        linewidths=1.5, alpha=0.1)
+
+            # Add a legend entry for this cluster
             legend_handles.append(
                 plt.Line2D([0], [0], color=color, lw=2, label=legend_text)
             )
 
-        plt.title(f'3D Contour Plot for DBSCAN Clusters: {name} \n {description}')
-        plt.xlabel('X-axis')
-        plt.ylabel('Y-axis')
-        plt.grid(True)
+        # Set title, labels, and grid
+        ax.set_title(f'{name}\n{description}', fontsize=10)
+        ax.set_xlabel('X-axis')
+        ax.set_ylabel('Y-axis')
+        ax.grid(True)
 
-        plt.legend(handles=legend_handles, loc='lower left', bbox_to_anchor=(0, 0))
+        # Add legend
+        ax.legend(handles=legend_handles, loc='lower left', bbox_to_anchor=(0, 0))
 
+        # If point data is provided, scatter plot the points
         if point_data is not None:
-            plt.scatter(point_data[:, 0], point_data[:, 1], s=10, color="black", zorder=5)
-
-        # Save the plot to the specified file
-        plt.savefig(filename, dpi = 300, bbox_inches='tight')  # Save the plot as an image file
-
-        # Close the plot to free up memory
-        plt.close()
-
+            ax.scatter(point_data[:, 0], point_data[:, 1], s=10, color="black", zorder=5)
     
     def visualize_result_as_graph(
             self,
-            label_infer: list,
+            list_label_infer: list,
             point_data: np.ndarray,
         ):
         """
@@ -562,7 +569,7 @@ class Dbscan_3D:
 
         Parameters
         ----------
-        label_infer : list
+        list_label_infer : list
             A list of cluster labels inferred for each data point. Each element 
             represents the cluster assignment of the corresponding point in `point_data`.
         point_data : np.ndarray
@@ -585,6 +592,7 @@ class Dbscan_3D:
         A PNG file named `<timestamp>_cluster_result_graph_visualization.png` is saved 
         in the directory `self.outdir` with high resolution (300 dpi).
         """
+        label_infer = list_label_infer[-1]
 
         # similarity_matrix = create_similarity_matrix(label_infer)
         num_clusters = set(label_infer)

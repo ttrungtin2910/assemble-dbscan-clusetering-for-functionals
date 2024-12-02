@@ -9,8 +9,8 @@ if __name__ == '__main__':
     
     # run_2d()
     # for random_seed in range(0, 20):
-    np.random.seed(random_seed)
-    for data_type in range(6):
-        # data_type = 0
-        run_3d(data_type=data_type, random_seed = random_seed)
-    # run_3d(data_type=0, random_seed = random_seed)
+    # np.random.seed(random_seed)
+    # for data_type in range(6):
+    #     # data_type = 0
+    #     run_3d(data_type=data_type, random_seed = random_seed)
+    run_3d(data_type=1, random_seed = random_seed)
