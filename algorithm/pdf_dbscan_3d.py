@@ -1,15 +1,16 @@
 
 # Import libraries
 import os
-
 import numpy as np
 from typing import List
 from matplotlib import cm
 from typing import Callable
 from datetime import datetime
 import matplotlib.pyplot as plt
+
 from scipy.stats import multivariate_normal
 
+from ensemble.neighbor_detection import create_graph
 from ensemble.data_tool import create_similarity_matrix
 from ensemble.visualization import visualize_matrix_as_graph_with_coordinates
 
@@ -610,11 +611,13 @@ class Dbscan_3D:
             consider_list = [-1 if element == index_cluster else 0 for element in label_infer]
 
             # Generate the similarity matrix for the current cluster
-            similarity_matrix = create_similarity_matrix(consider_list)
-
+            similarity_matrix = create_similarity_matrix(consider_list, visualize_by_cluster=True)
+            
+            # Create Graph
+            G = create_graph(similarity_matrix)
             # Call the visualization function to plot on the corresponding subplot
             visualize_matrix_as_graph_with_coordinates(
-                matrix=similarity_matrix,
+                G=G,
                 list_points=point_data,
                 index_cluster=index_cluster,
                 ax=axes[i]

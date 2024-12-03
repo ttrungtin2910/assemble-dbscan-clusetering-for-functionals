@@ -1,14 +1,12 @@
 import networkx as nx
-import networkx as nx
 import numpy as np
 import matplotlib.axes
-from typing import Union
 
 def visualize_matrix_as_graph_with_coordinates(
-        matrix: np.ndarray,
+        G: nx.Graph,
         list_points: np.ndarray,
-        index_cluster: int,
-        ax: matplotlib.axes.Axes
+        index_cluster: int = 0,
+        ax: matplotlib.axes.Axes = None,
     ):
     """
     Visualizes a graph from a similarity matrix with given point coordinates 
@@ -49,21 +47,6 @@ def visualize_matrix_as_graph_with_coordinates(
     """
     # Create positions for nodes based on given list_points
     positions = {i: tuple(list_points[i]) for i in range(len(list_points))}
-    n = len(matrix)  # Number of nodes
-
-    # Initialize an empty graph
-    G = nx.Graph()
-
-    # Add nodes to the graph
-    G.add_nodes_from(range(n))
-
-    # Add edges with weights from the matrix
-    for i in range(n):
-        for j in range(i + 1, n):
-            weight = matrix[i][j]
-            # Add edges only if the weight is non-zero
-            if weight != 0:
-                G.add_edge(i, j, weight=weight)
 
     # Determine node colors based on connectivity
     node_colors = []

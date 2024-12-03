@@ -1,6 +1,9 @@
 import numpy as np
 
-def create_similarity_matrix(lst):
+def create_similarity_matrix(
+        lst,
+        visualize_by_cluster: bool = False
+        ):
     """
     Creates a similarity matrix based on a given list, where elements with a 
     value of -1 are considered similar to each other.
@@ -30,7 +33,10 @@ def create_similarity_matrix(lst):
     lst = np.array(lst)
     
     # Compare each element in the filtered array to create similarity matrix
-    matrix = ((lst[:, None] == lst[None, :]) & (lst[:, None] == -1)).astype(int)
+    if visualize_by_cluster:
+        matrix = ((lst[:, None] == lst[None, :]) & (lst[:, None] == -1)).astype(int)
+    else:
+        matrix = ((lst[:, None] == lst[None, :])).astype(int)
     
     # Keep only upper triangular part (including diagonal)
     upper_triangle_matrix = np.triu(matrix)

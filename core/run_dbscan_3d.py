@@ -1,8 +1,10 @@
 
 import os
 import numpy as np
-from tqdm import tqdm
+from mpire import WorkerPool
 import matplotlib.pyplot as plt
+from ensemble.neighbor_detection import create_graph, leiden_alg
+from ensemble.data_tool import create_similarity_matrix
 
 from tools.log import logger
 from evaluate.metrics import ari
@@ -73,7 +75,6 @@ def run(
                 for epsilon in epsilon_range
                     for min_point in min_point_range
             ]
-
     # Create figure and subplots
     num_plots = len(list_input_parameter)
     num_cols = 3  # Number of columns in the subplot grid
@@ -83,8 +84,8 @@ def run(
 
     list_label_infer = []
 
-    # Run the algorithm and plot results in each subplot
-    for idx, input_parameter in enumerate(tqdm(list_input_parameter)):
+    # Define a worker function that will handle each input parameter and perform the necessary tasks
+    def process_parameter(input_parameter, idx):
         # Run the DBSCAN algorithm
         label_infer = object_dbscan_3d.run_algorithm(
             data=data,
@@ -93,16 +94,12 @@ def run(
             **input_parameter
         )
 
-        list_label_infer.append(label_infer)
-
         # Evaluate the clustering result using ARI
         ari_value = ari(
             labels_infer=label_infer,
             labels_true=label
         )
         evaluate_status = f"ARI: {round(ari_value, 3)} when {input_parameter}"
-        # logger.info(evaluate_status)
-        # logger.info('-' * 50)
 
         # Plot the result in the corresponding subplot
         ax = axes[idx]
@@ -117,6 +114,13 @@ def run(
             ax=ax  # Pass the current subplot
         )
 
+        return [label_infer]
+
+    # Create a worker pool and process the parameters in parallel
+    with WorkerPool() as pool:  # You can adjust the number of jobs as needed
+        list_label_infer = pool.map(lambda idx: process_parameter(list_input_parameter[idx], idx), range(num_plots))
+
+    # Save to file
     # Hide unused subplots
     for ax in axes[num_plots:]:
         ax.axis('off')
@@ -130,12 +134,41 @@ def run(
     plt.savefig(output_filename, dpi=300, bbox_inches='tight')
     plt.close()
 
+    # Create list of similarity matrix
+    list_similarity_matrix = [create_similarity_matrix(label_infer[0]) for label_infer in list_label_infer]
 
-    logger.info('START Visualization clustering result as graph')
-    
-    object_dbscan_3d.visualize_result_as_graph(
-        point_data=point_data,
-        list_label_infer=list_label_infer
+    # create ensemble similary matrix
+    ensemble_similarity_matrix = sum(list_similarity_matrix)
+
+    # Create graph
+    G = create_graph(ensemble_similarity_matrix)
+
+    output_filename_leiden = os.path.join(
+        object_dbscan_3d.outdir,
+        f"{object_dbscan_3d.current_time}_esemble_learning.png"
     )
 
-    logger.info('-'*50 + '\n'*2)
+    label_infer_neighbor = leiden_alg(
+        G,
+        list_points=point_data,
+        output_filename=output_filename_leiden
+        )
+
+    # Evaluate the clustering result using ARI
+    ari_value = ari(
+        labels_infer=label_infer_neighbor,
+        labels_true=label
+    )
+    evaluate_status = f"ARI Final: {round(ari_value, 3)}"
+
+    print(evaluate_status)
+
+    if False:
+        logger.info('START Visualization clustering result as graph')
+        
+        object_dbscan_3d.visualize_result_as_graph(
+            point_data=point_data,
+            list_label_infer=list_label_infer
+        )
+
+        logger.info('-'*50 + '\n'*2)
