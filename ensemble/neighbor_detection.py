@@ -29,7 +29,8 @@ def leiden_alg(G, list_points, output_filename):
     positions = {i: tuple(list_points[i]) for i in range(len(list_points))}
 
     # Detect communities using the Leiden algorithm
-    coms = algorithms.leiden(G)
+    # coms = algorithms.leiden(G)
+    coms = algorithms.louvain(G)
 
     # Get the list of communities and assign a different color for each community
     community_colors = coms.communities
@@ -44,18 +45,29 @@ def leiden_alg(G, list_points, output_filename):
             list_labels[node] = i
 
     # Draw the graph
-    # pos = nx.spring_layout(G)  # Generate layout for the graph
     plt.figure(figsize=(8, 8))
 
     # Draw nodes with colors corresponding to their community
-    nx.draw_networkx_nodes(G, positions, node_size=20, cmap=plt.cm.rainbow, node_color=[color_map[node] for node in G.nodes()])
+    node_color = [color_map[node] for node in G.nodes()]
+    nx.draw_networkx_nodes(G, positions, node_size=20, cmap=plt.cm.rainbow, node_color=node_color)
+
+    # Optionally, draw edges and labels (you can uncomment if needed)
     # nx.draw_networkx_edges(G, positions, alpha=0.5)
     # nx.draw_networkx_labels(G, positions, font_size=12)
+
+    # Create a legend for the communities
+    unique_communities = list(set(node_color))
+    handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=plt.cm.rainbow(c / len(unique_communities)), markersize=10) for c in unique_communities]
+    labels = [f"Community {c}" for c in unique_communities]
+    plt.legend(handles, labels, title="Communities")
 
     # Set the title of the plot
     plt.title('Communities in Graph (Leiden Algorithm)')
 
+    # Adjust layout to ensure everything fits
     plt.tight_layout()
+
+    # Save the plot to the specified output file
     plt.savefig(output_filename, dpi=300, bbox_inches='tight')
     plt.close()
 

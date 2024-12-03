@@ -67,7 +67,7 @@ def run(
     min_point_range[min_point_range < 1] = 1
 
     # Create epsilon range
-    epsilon_range = np.arange(0.2, 0.6 + 0.00001, 0.1)
+    epsilon_range = np.arange(0.1, 0.5 + 0.00001, 0.1)
 
     # Create list input parameter
     list_input_parameter = [
@@ -94,6 +94,19 @@ def run(
             **input_parameter
         )
 
+        return [label_infer]
+
+    # Create a worker pool and process the parameters in parallel
+    with WorkerPool() as pool:  # You can adjust the number of jobs as needed
+        list_label_infer = pool.map(lambda idx: process_parameter(list_input_parameter[idx], idx), range(num_plots))
+
+    logger.info('START visualization')
+    for idx, label_infer in enumerate(list_label_infer):
+
+        input_parameter = list_input_parameter[idx]
+
+        label_infer = label_infer[0]
+
         # Evaluate the clustering result using ARI
         ari_value = ari(
             labels_infer=label_infer,
@@ -114,16 +127,8 @@ def run(
             ax=ax  # Pass the current subplot
         )
 
-        return [label_infer]
-
-    # Create a worker pool and process the parameters in parallel
-    with WorkerPool() as pool:  # You can adjust the number of jobs as needed
-        list_label_infer = pool.map(lambda idx: process_parameter(list_input_parameter[idx], idx), range(num_plots))
-
-    # Save to file
-    # Hide unused subplots
-    for ax in axes[num_plots:]:
         ax.axis('off')
+    # Save to file
 
     # Save the combined plot
     output_filename = os.path.join(
@@ -133,6 +138,8 @@ def run(
     plt.tight_layout()
     plt.savefig(output_filename, dpi=300, bbox_inches='tight')
     plt.close()
+
+    logger.info('START Ensemble algorithm')
 
     # Create list of similarity matrix
     list_similarity_matrix = [create_similarity_matrix(label_infer[0]) for label_infer in list_label_infer]
